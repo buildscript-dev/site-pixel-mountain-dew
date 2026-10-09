@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>MOUNTAIN DEW 8-BIT ARCADE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --dew-green: #00FF33;
+      --dew-neon: #70FF00;
+      --dew-red: #FF0033;
+      --dew-cyan: #00F0FF;
+      --dew-blue: #0033FF;
+      --pac-yellow: #FFFF00;
+      --pac-blue: #2121DE;
+      --arcade-dark: #070913;
+      --arcade-panel: #111425;
+      --pixel-size: 4px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      image-rendering: pixelated;
+      font-family: 'Press Start 2P', monospace, monospace;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    body {
+      background-color: var(--arcade-dark);
+      color: #FFFFFF;
+      overflow-x: hidden;
+      line-height: 1.5;
+    }
+
+    /* CRT scanline overlay */
+    .crt-overlay {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 9999;
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+      background-size: 100% 4px, 6px 100%;
+    }
+
+    /* Header & Arcade Status Bar */
+    header {
+      background: #000;
+      border-bottom: 4px solid var(--pac-blue);
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--dew-green);
+      font-size: 14px;
+      text-shadow: 2px 2px #000, 0 0 8px var(--dew-green);
+    }
+
+    .arcade-hud {
+      display: flex;
+      gap: 16px;
+      font-size: 10px;
+    }
+
+    .hud-val {
+      color: var(--pac-yellow);
+    }
+
+    .sound-btn {
+      background: #222;
+      border: 2px solid var(--dew-green);
+      color: var(--dew-green);
+      padding: 6px 10px;
+      font-size: 9px;
+      cursor: pointer;
+    }
+
+    /* Hero Section */
+    .hero-section {
+      min-height: 85vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 30px 16px;
+      position: relative;
+      background: radial-gradient(circle at center, #182245 0%, #070913 75%);
+      border-bottom: 6px dashed var(--pac-blue);
+    }
+
+    .pac-maze-decor {
+      position: absolute;
+      inset: 15px;
+      border: 4px double var(--pac-blue);
+      border-radius: 12px;
+      pointer-events: none;
+      box-shadow: inset 0 0 15px var(--pac-blue);
+    }
+
+    .title-banner {
+      font-size: clamp(20px, 5vw, 36px);
+      color: var(--dew-green);
+      text-shadow: 4px 4px 0 #000, 0 0 12px var(--dew-neon);
+      margin-bottom: 12px;
+      letter-spacing: 2px;
+    }
+
+    .subtitle-banner {
+      font-size: clamp(10px, 2.5vw, 13px);
+      color: var(--pac-yellow);
+      margin-bottom: 30px;
+      max-width: 650px;
+      line-height: 1.8;
+    }
+
+    .pellet-row {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      margin-bottom: 30px;
+    }
+
+    .pellet {
+      width: 8px;
+      height: 8px;
+      background: #FFE0A0;
+      box-shadow: 0 0 6px #FFE0A0;
+    }
+
+    .power-pellet {
+      width: 16px;
+      height: 16px;
+      background: var(--pac-yellow);
+      border-radius: 50%;
+      box-shadow: 0 0 12px var(--pac-yellow);
+      animation: blink 0.5s infinite alternate;
+    }
+
+    @keyframes blink {
+      0% { opacity: 0.3; transform: scale(0.9); }
+      100% { opacity: 1; transform: scale(1.1); }
+    }
+
+    .hero-cta {
+      background: var(--dew-red);
+      color: #FFF;
+      border: 4px solid #FFF;
+      padding: 16px 24px;
+      font-size: clamp(11px, 2.5vw, 14px);
+      cursor: pointer;
+      box-shadow: 6px 6px 0 #000;
+      transition: transform 0.1s;
+      text-decoration: none;
+      display: inline-block;
+    }
+    .hero-cta:active {
+      transform: translate(3px, 3px);
+      box-shadow: 3px 3px 0 #000;
+    }
+
+    /* FULL VENDING MACHINE SECTION */
+    .vending-section {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 16px;
+      background: #04050a;
+      position: relative;
+    }
+
+    .section-title {
+      font-size: clamp(14px, 3vw, 22px);
+      color: var(--pac-yellow);
+      margin-bottom: 8px;
+      text-align: center;
+      text-shadow: 2px 2px #000;
+    }
+
+    .section-subtitle {
+      font-size: 10px;
+      color: #8899AA;
+      margin-bottom: 24px;
+      text-align: center;
+    }
+
+    /* Vending Cabinet */
+    .vending-cabinet {
+      width: 100%;
+      max-width: 380px;
+      background: #14172a;
+      border: 6px solid #283058;
+      box-shadow: 0 0 30px rgba(0, 255, 51, 0.15), inset 0 0 10px #090a14;
+      padding: 18px;
+      position: relative;
+    }
+
+    .cabinet-header {
+      background: #000;
+      border: 3px solid var(--pac-blue);
+      padding: 10px;
+      text-align: center;
+      margin-bottom: 16px;
+      box-shadow: inset 0 0 10px rgba(33, 33, 222, 0.6);
+    }
+    .cabinet-header h2 {
+      font-size: 13px;
+      color: var(--dew-green);
+      text-shadow: 0 0 8px var(--dew-green);
+    }
+
+    /* Showcase Window */
+    .vending-window {
+      background: #0c1020;
+      border: 4px solid #1a2240;
+      padding: 14px 10px;
+      margin-bottom: 16px;
+      min-height: 180px;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      position: relative;
+      box-shadow: inset 0 0 15px rgba(0, 240, 255, 0.1);
+    }
+
+    .shelf-item {
+      background: rgba(0,0,0,0.5);
+      border: 2px dashed #2121DE;
+      padding: 10px 6px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .shelf-item.active {
+      border-color: var(--dew-green);
+      background: rgba(0, 255, 51, 0.1);
+    }
+
+    .flavor-name {
+      font-size: 8px;
+      text-align: center;
+      color: #EEE;
+    }
+
+    /* Pixel Cans */
+    .pixel-can {
+      width: 34px;
+      height: 52px;
+      position: relative;
+      border-radius: 4px;
+      border: 3px solid #000;
+      box-shadow: 2px 2px 0 rgba(0,0,0,0.4);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .pixel-can::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 6px;
+      background: #DDD;
+      border-bottom: 2px solid #555;
+    }
+    .pixel-can::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 5px;
+      background: #AAA;
+      border-top: 2px solid #333;
+    }
+    .can-label {
+      font-size: 6px;
+      font-weight: bold;
+      writing-mode: vertical-rl;
+      text-orientation: upright;
+      letter-spacing: -1px;
+      text-shadow: 1px 1px 0 #000;
+    }
+
+    .can-original {
+      background: linear-gradient(135deg, #00FF33 40%, #70FF00 100%);
+      color: #000;
+    }
+    .can-red {
+      background: linear-gradient(135deg, #FF0033 40%, #88001B 100%);
+      color: #FFF;
+    }
+    .can-voltage {
+      background: linear-gradient(135deg, #0044FF 40%, #001188 100%);
+      color: #00F0FF;
+    }
+    .can-baja {
+      background: linear-gradient(135deg, #00F0FF 40%, #007788 100%);
+      color: #000;
+    }
+
+    /* Controls Panel */
+    .cabinet-controls {
+      background: #090b16;
+      border: 3px solid #202747;
+      padding: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .price-tag {
+      font-size: 10px;
+      color: var(--pac-yellow);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    /* Big Glowing Red Circle Button */
+    .vend-button-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+    .vend-label {
+      font-size: 7px;
+      color: #AAA;
+    }
+    .red-circle-btn {
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, #FF5555, #D80000 70%, #660000);
+      border: 4px solid #FFFFFF;
+      box-shadow: 0 0 15px #FF0033, inset 0 2px 4px #FFAAAA, 4px 4px 0 #000;
+      cursor: pointer;
+      position: relative;
+      transition: transform 0.08s ease, box-shadow 0.08s ease;
+      outline: none;
+    }
+    .red-circle-btn:active, .red-circle-btn.pressed {
+      transform: translate(3px, 3px);
+      box-shadow: 0 0 8px #FF0033, inset 0 3px 6px #550000, 1px 1px 0 #000;
+    }
+
+    /* Dispenser slot & Drop Animation */
+    .dispenser-slot {
+      background: #05060a;
+      border: 4px solid #1a1e36;
+      border-radius: 4px;
+      height: 90px;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: inset 0 8px 12px rgba(0,0,0,0.9);
+    }
+    .dispenser-flap {
+      position: absolute;
+      top: 0;
+      left: 10%;
+      right: 10%;
+      height: 8px;
+      background: #333955;
+      border-bottom: 2px solid #111425;
+      z-index: 10;
+    }
+    .dispenser-hint {
+      font-size: 8px;
+      color: #445566;
+      pointer-events: none;
+    }
+
+    /* Dropped Can inside dispenser */
+    .dropped-can {
+      position: absolute;
+      top: -60px;
+      transform: rotate(75deg);
+      cursor: pointer;
+      z-index: 5;
+      display: none;
+    }
+    .dropped-can.falling {
+      display: flex;
+      animation: dropCan 0.55s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+    }
+
+    @keyframes dropCan {
+      0% { top: -60px; transform: rotate(15deg) scale(0.9); }
+      60% { top: 34px; transform: rotate(85deg) scale(1.05); }
+      75% { top: 22px; transform: rotate(70deg) scale(1); }
+      90% { top: 32px; transform: rotate(80deg); }
+      100% { top: 30px; transform: rotate(75deg); }
+    }
+
+    /* Can Inspection Modal */
+    .inspect-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      z-index: 2000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .inspect-card {
+      background: #0F1224;
+      border: 4px solid var(--dew-green);
+      box-shadow: 0 0 25px var(--dew-green);
+      max-width: 340px;
+      width: 100%;
+      padding: 20px;
+      text-align: center;
+      position: relative;
+    }
+    .inspect-card h3 {
+      color: var(--pac-yellow);
+      font-size: 14px;
+      margin-bottom: 14px;
+    }
+    .modal-close {
+      position: absolute;
+      top: 8px;
+      right: 10px;
+      background: #FF0033;
+      border: 2px solid #FFF;
+      color: #FFF;
+      font-size: 10px;
+      padding: 4px 8px;
+      cursor: pointer;
+    }
+
+    /* Mini Arcade Game */
+    .minigame-section {
+      padding: 40px 16px;
+      background: #070913;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      border-top: 6px dashed var(--pac-blue);
+    }
+    .game-canvas-wrap {
+      border: 4px solid var(--pac-blue);
+      box-shadow: 0 0 15px var(--pac-blue);
+      background: #000;
+      margin: 16px 0;
+    }
+    canvas {
+      display: block;
+      background: #000;
+    }
+    .game-controls {
+      display: flex;
+      gap: 12px;
+      margin-top: 10px;
+    }
+    .game-btn {
+      background: #111425;
+      border: 2px solid var(--dew-green);
+      color: var(--dew-green);
+      padding: 10px 16px;
+      font-size: 10px;
+      cursor: pointer;
+    }
+
+    footer {
+      background: #000;
+      border-top: 4px solid var(--pac-blue);
+      padding: 20px 16px;
+      text-align: center;
+      font-size: 9px;
+      color: #778899;
+    }
+  </style>
+</head>
+<body>
+  <div class="crt-overlay"></div>
+
+  <!-- Header -->
+  <header>
+    <div class="brand">
+      <span>👾</span>
+      <span>MTN DEW 8-BIT</span>
+    </div>
+    <div class="arcade-hud">
+      <div>1UP <span class="hud-val" id="hud-score">02400</span></div>
+      <div>HIGH <span class="hud-val">99990</span></div>
+    </div>
+    <button class="sound-btn" id="soundToggle">AUDIO: ON</button>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero-section">
+    <div class="pac-maze-decor"></div>
+    <h1 class="title-banner">DO THE DEW</h1>
+    <p class="subtitle-banner">INSERT COIN TO UNLOCK 8-BIT CITRUS REFRESHMENT</p>
+    
+    <div class="pellet-row">
+      <div class="power-pellet"></div>
+      <div class="pellet"></div>
+      <div class="pellet"></div>
+      <div class="pellet"></div>
+      <div style="font-size: 20px;">🟡</div>
+      <div class="pellet"></div>
+      <div class="pellet"></div>
+      <div class="pellet"></div>
+      <div class="power-pellet"></div>
+    </div>
+
+    <a href="#vending" class="hero-cta">▼ SCROLL TO VEND ▼</a>
+  </section>
+
+  <!-- VENDING MACHINE SECTION -->
+  <section class="vending-section" id="vending">
+    <h2 class="section-title">PAC-DEW VENDING UNIT</h2>
+    <p class="section-subtitle">SELECT YOUR FLAVOR & SMASH THE RED BUTTON</p>
+
+    <div class="vending-cabinet" id="vendingCabinet">
+      <!-- Cabinet Marquee -->
+      <div class="cabinet-header">
+        <h2>★ MOUNTAIN DEW SELECTOR ★</h2>
+      </div>
+
+      <!-- Glass Window with Cans -->
+      <div class="vending-window">
+        <div class="shelf-item active" data-flavor="original">
+          <div class="pixel-can can-original">
+            <span class="can-label">DEW</span>
+          </div>
+          <span class="flavor-name">ORIGINAL</span>
+        </div>
+
+        <div class="shelf-item" data-flavor="red">
+          <div class="pixel-can can-red">
+            <span class="can-label">RED</span>
+          </div>
+          <span class="flavor-name">CODE RED</span>
+        </div>
+
+        <div class="shelf-item" data-flavor="voltage">
+          <div class="pixel-can can-voltage">
+            <span class="can-label">VOLT</span>
+          </div>
+          <span class="flavor-name">VOLTAGE</span>
+        </div>
+
+        <div class="shelf-item" data-flavor="baja">
+          <div class="pixel-can can-baja">
+            <span class="can-label">BAJA</span>
+          </div>
+          <span class="flavor-name">BAJA BLAST</span>
+        </div>
+      </div>
+
+      <!-- Controls & Red Button -->
+      <div class="cabinet-controls">
+        <div class="price-tag">
+          <span>CREDIT: 1 COIN</span>
+          <span style="color:var(--dew-green)">READY TO DROP</span>
+        </div>
+
+        <div class="vend-button-wrapper">
+          <button class="red-circle-btn" id="vendBtn" aria-label="Vend Mountain Dew"></button>
+          <span class="vend-label">PRESS TO VEND</span>
+        </div>
+      </div>
+
+      <!-- Dispenser Tray -->
+      <div class="dispenser-slot" id="dispenserSlot">
+        <div class="dispenser-flap"></div>
+        <span class="dispenser-hint" id="dispenserHint">DISPENSER TRAY</span>
+        <div class="dropped-can pixel-can can-original" id="droppedCan">
+          <span class="can-label" id="droppedCanLabel">DEW</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Mini Arcade Catch Game -->
+  <section class="minigame-section">
+    <h2 class="section-title">MINI ARCADE: PAC-CATCH</h2>
+    <p class="section-subtitle">CATCH FALLING DEW POWER-PELLETS!</p>
+    <div class="game-canvas-wrap">
+      <canvas id="gameCanvas" width="300" height="200"></canvas>
+    </div>
+    <div class="game-controls">
+      <button class="game-btn" id="btnLeft">◄ LEFT</button>
+      <button class="game-btn" id="btnRight">RIGHT ►</button>
+    </div>
+  </section>
+
+  <!-- Can Detail Modal -->
+  <div class="inspect-modal" id="inspectModal">
+    <div class="inspect-card">
+      <button class="modal-close" id="modalClose">X</button>
+      <h3 id="modalTitle">MOUNTAIN DEW</h3>
+      <div style="display:flex; justify-content:center; margin: 15px 0;">
+        <div class="pixel-can can-original" id="modalCan" style="transform: scale(1.6);">
+          <span class="can-label" id="modalCanLabel">DEW</span>
+        </div>
+      </div>
+      <p id="modalDesc" style="font-size: 9px; line-height: 1.6; color: #FFF; margin-bottom: 12px;">Citrus recharge packed with legendary high-voltage kick.</p>
+      <div style="font-size: 8px; color: var(--pac-yellow); line-height: 1.8;">
+        +100 SPEED BOOST<br>
+        +999 HIGH SCORE<br>
+        INVINCIBLE TO GHOSTS (10s)
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <p>PAC-DEW ARCADE EDITION • 8-BIT NOSTALGIA</p>
+  </footer>
+
+  <script>
+    // Web Audio 8-bit sound generator
+    let audioCtx = null;
+    let soundEnabled = true;
+
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+    }
+
+    function playBeep(freq, type, duration) {
+      if (!soundEnabled) return;
+      initAudio();
+      try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type || 'square';
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch(e) {}
+    }
+
+    function playVendSound() {
+      if (!soundEnabled) return;
+      initAudio();
+      // Coin clink then heavy mechanical drop clunk
+      playBeep(987, 'square', 0.1);
+      setTimeout(() => playBeep(1318, 'square', 0.15), 100);
+      setTimeout(() => playBeep(120, 'sawtooth', 0.35), 250);
+      setTimeout(() => playBeep(80, 'triangle', 0.4), 450);
+    }
+
+    // Sound toggle
+    document.getElementById('soundToggle').addEventListener('click', () => {
+      soundEnabled = !soundEnabled;
+      document.getElementById('soundToggle').innerText = soundEnabled ? 'AUDIO: ON' : 'AUDIO: OFF';
+      if (soundEnabled) playBeep(600, 'square', 0.1);
+    });
+
+    // Flavor selection
+    let selectedFlavor = 'original';
+    const flavors = {
+      original: { name: 'MTN DEW ORIGINAL', class: 'can-original', label: 'DEW', desc: 'Legendary citrus blast that fuels every high-score session!' },
+      red: { name: 'MTN DEW CODE RED', class: 'can-red', label: 'RED', desc: 'Cherry rush that delivers arcade-level adrenaline overload.' },
+      voltage: { name: 'MTN DEW VOLTAGE', class: 'can-voltage', label: 'VOLT', desc: 'Charged with raspberry citrus flavor and ginseng voltage.' },
+      baja: { name: 'MTN DEW BAJA BLAST', class: 'can-baja', label: 'BAJA', desc: 'Tropical lime hurricane straight from the arcade shores.' }
+    };
+
+    const shelfItems = document.querySelectorAll('.shelf-item');
+    shelfItems.forEach(item => {
+      item.addEventListener('click', () => {
+        playBeep(440, 'square', 0.08);
+        shelfItems.forEach(i => i.classList.remove('active'));
+        item.classList.add('active');
+        selectedFlavor = item.getAttribute('data-flavor');
+      });
+    });
+
+    // Red circle button vending interaction
+    const vendBtn = document.getElementById('vendBtn');
+    const droppedCan = document.getElementById('droppedCan');
+    const droppedCanLabel = document.getElementById('droppedCanLabel');
+    const dispenserHint = document.getElementById('dispenserHint');
+    const cabinet = document.getElementById('vendingCabinet');
+    let isVending = false;
+
+    vendBtn.addEventListener('click', () => {
+      if (isVending) return;
+      isVending = true;
+      vendBtn.classList.add('pressed');
+      playVendSound();
+
+      // Shake cabinet
+      cabinet.style.transform = 'translate(2px, 3px)';
+      setTimeout(() => cabinet.style.transform = 'translate(-3px, -2px)', 80);
+      setTimeout(() => cabinet.style.transform = 'translate(2px, -1px)', 160);
+      setTimeout(() => cabinet.style.transform = 'none', 250);
+
+      // Reset dropped can
+      droppedCan.classList.remove('falling');
+      droppedCan.style.display = 'none';
+      dispenserHint.style.display = 'none';
+
+      // Update flavor of dropping can
+      const flavorData = flavors[selectedFlavor];
+      droppedCan.className = 'dropped-can pixel-can ' + flavorData.class;
+      droppedCanLabel.innerText = flavorData.label;
+
+      setTimeout(() => {
+        vendBtn.classList.remove('pressed');
+        droppedCan.style.display = 'flex';
+        droppedCan.classList.add('falling');
+        isVending = false;
+
+        // Score increment
+        const scoreEl = document.getElementById('hud-score');
+        let curScore = parseInt(scoreEl.innerText, 10);
+        scoreEl.innerText = String(curScore + 500).padStart(5, '0');
+      }, 300);
+    });
+
+    // Modal inspection
+    const modal = document.getElementById('inspectModal');
+    const modalClose = document.getElementById('modalClose');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalDesc = document.getElementById('modalDesc');
+    const modalCan = document.getElementById('modalCan');
+    const modalCanLabel = document.getElementById('modalCanLabel');
+
+    droppedCan.addEventListener('click', () => {
+      playBeep(880, 'square', 0.2);
+      const flavorData = flavors[selectedFlavor];
+      modalTitle.innerText = flavorData.name;
+      modalDesc.innerText = flavorData.desc;
+      modalCan.className = 'pixel-can ' + flavorData.class;
+      modalCanLabel.innerText = flavorData.label;
+      modal.style.display = 'flex';
+    });
+
+    modalClose.addEventListener('click', () => {
+      playBeep(330, 'square', 0.1);
+      modal.style.display = 'none';
+    });
+
+    // Mini Pac-Dew Game
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    let playerX = 135;
+    const playerWidth = 30;
+    const pellets = [];
+    let gameScore = 0;
+
+    function spawnPellet() {
+      pellets.push({
+        x: Math.random() * (canvas.width - 20) + 10,
+        y: 0,
+        speed: 2 + Math.random() * 2,
+        color: Math.random() > 0.5 ? '#00FF33' : '#FFFF00'
+      });
+    }
+
+    let spawnTimer = 0;
+    function updateGame() {
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Player Pac-Mouth bucket
+      ctx.fillStyle = '#FFFF00';
+      ctx.beginPath();
+      ctx.arc(playerX + 15, 185, 12, 0.2 * Math.PI, 1.8 * Math.PI);
+      ctx.lineTo(playerX + 15, 185);
+      ctx.fill();
+
+      // Pellets
+      spawnTimer++;
+      if (spawnTimer % 45 === 0) spawnPellet();
+
+      for (let i = pellets.length - 1; i >= 0; i--) {
+        const p = pellets[i];
+        p.y += p.speed;
+        ctx.fillStyle = p.color;
+        ctx.fillRect(p.x, p.y, 8, 8);
+
+        // Catch check
+        if (p.y >= 170 && p.y <= 195 && p.x >= playerX - 5 && p.x <= playerX + 35) {
+          playBeep(1200, 'square', 0.05);
+          pellets.splice(i, 1);
+          gameScore += 10;
+          continue;
+        }
+
+        if (p.y > canvas.height) {
+          pellets.splice(i, 1);
+        }
+      }
+
+      ctx.fillStyle = '#FFF';
+      ctx.font = '8px "Press Start 2P"';
+      ctx.fillText('SCORE: ' + gameScore, 10, 15);
+
+      requestAnimationFrame(updateGame);
+    }
+    requestAnimationFrame(updateGame);
+
+    document.getElementById('btnLeft').addEventListener('click', () => {
+      playerX = Math.max(5, playerX - 25);
+    });
+    document.getElementById('btnRight').addEventListener('click', () => {
+      playerX = Math.min(canvas.width - 35, playerX + 25);
+    });
+
+    // Keyboard support for game
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft') playerX = Math.max(5, playerX - 25);
+      if (e.key === 'ArrowRight') playerX = Math.min(canvas.width - 35, playerX + 25);
+    });
+  </script>
+</body>
+</html>
